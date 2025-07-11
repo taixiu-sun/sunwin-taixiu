@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 5000;
 
 // === Biến lưu trạng thái ===
 let currentData = {
-  id: "binhtool90",
+  id: "rinkivana",
   id_phien: null,
   ket_qua: "",
   pattern: "",
