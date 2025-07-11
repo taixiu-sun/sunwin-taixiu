@@ -18,289 +18,153 @@ let currentData = {
 };
 
 let id_phien_chua_co_kq = null;
-let historyString = "";
+let history = []; // Sử dụng mảng đối tượng thay vì chuỗi
 
-// ================== Công thức dán trực tiếp =====================
-const ruleLines = `
-XTXXT|T
-XXXXT|T
-XTXXT|X
-TXXTT|T
-XTXTX|X
-TTXXT|X
-XXXTX|X
-TXXTX|T
-TXXTT|T
-XTTTX|X
-TTXTT|T
-TXTTT|T
-TTTXX|T
-XTTTX|X
-TXXXX|T
-TTXXT|X
-XXXXT|T
-XXXXX|T
-TTXTX|X
-TXXXX|X
-XTXTX|X
-XXXTX|X
-TXXTT|X
-TTTTX|X
-XTXXX|T
-TXTXT|T
-XTTTT|X
-XXXTX|X
-XXTXT|T
-TTTXX|X
-XTXXX|T
-XTXTT|X
-XXTTX|X
-XXTTT|T
-TXXXX|T
-TTXXX|X
-TXXXX|T
-XXTXX|T
-XTXXT|X
-TXTXT|T
-TTTXX|X
-TXTXT|X
-XXXXX|X
-TXXTX|X
-XXXTX|X
-TXTTT|T
-XXXXX|T
-XTTXX|T
-XXXXX|T
-TXTTX|X
-TTXXT|T
-XXTTT|X
-XTXXT|T
-XXTXX|T
-TXXTX|T
-XXXXT|X
-XXXXT|X
-TXTTX|T
-XXTTT|T
-TTTXT|T
-TTXXX|T
-TXXXT|X
-XTTTT|X
-TTXTX|T
-TXXTT|T
-TTTTX|T
-XXTTX|X
-XXTTX|X
-TTTXX|T
-TXTXX|X
-XXXXX|X
-TTXXT|X
-XXTTT|T
-TXXTX|T
-XTTXT|T
-TTXTX|X
-XXTTX|X
-TXTTX|T
-XXXTX|X
-XXXTT|X
-TXTTT|T
-TXXTT|X
-XTXXX|T
-TTTTT|X
-TTTXX|X
-TXTTX|X
-XXTTX|X
-TXXXT|X
-TTTTX|T
-XXXXX|T
-XTXXT|T
-TTXTX|T
-TTXXX|T
-TXXXX|T
-TXXTX|T
-XXTXT|X
-XTTXT|T
-XXTXT|T
-XXTXT|T
-XTXXT|T
-XTTTX|T
-TXTTX|X
-TTXXX|X
-TXXTT|X
-TTTTX|X
-XTXTT|T
-XTTXX|T
-XTTTX|T
-TXXXX|X
-XXTXT|X
-XTTTX|X
-XTXTX|T
-TXXXX|X
-TTXXX|X
-XXTTT|X
-TXTXT|T
-XTTXT|T
-TXXTX|X
-XTXTX|X
-TXXXT|T
-XTTTX|X
-XXTXX|X
-TXXXX|X
-XTXTT|T
-TXXTX|X
-XTXXX|T
-TTTXX|T
-TTTTT|T
-TXXTX|T
-XXXXT|T
-XXTXT|X
-TXXTX|X
-TXXXX|T
-XXXTT|T
-XTTTX|X
-TTXXT|X
-XXTTX|X
-TTTXX|X
-TTTTX|T
-XXTXX|T
-TXXTX|X
-TTTTX|T
-XTXXT|X
-TTXTT|X
-TTTXX|X
-TXXXT|T
-TXXXX|T
-XTTXX|T
-XTXXX|T
-XXXTX|T
-XTXXT|T
-TTTTT|X
-TTTXX|X
-XTXXT|T
-XXTTX|X
-TTTTT|T
-TXTXX|T
-TXXTT|X
-TXTTT|T
-XTTTX|T
-TXXXX|X
-TTTXT|T
-XTXTT|X
-TXXTX|T
-TXTXX|X
-XTTTX|X
-XXTTT|T
-XXXTX|X
-XXTTX|T
-XTXTT|T
-TXTTX|T
-XTXXX|T
-XXTXX|T
-XTTXT|X
-XXTTT|X
-TXTTX|T
-XTXXT|T
-XXTTT|X
-TTXTT|T
-XTTXX|T
-XXTTT|T
-XTTTX|T
-TTXTX|X
-TXTXT|X
-TTTTX|X
-XXXXT|T
-TXTXT|T
-XTTXT|X
-XTTXX|T
-TTXTX|T
-XTTXT|T
-XXXTT|X
-TTTXT|T
-TTTXX|X
-TXTXT|T
-TTTXX|T
-XTTTX|X
-XXTXX|T
-TXTTX|X
-TXTXT|X
-TTTTX|T
-TXXTX|T
-XXTTX|T
-TXXTX|X
-TTXTX|X
-TXTTX|T
-XXTTX|T
-TXXXT|T
-XXTXT|T
-TXTTT|X
-TTXTX|T
-TXXXX|X
-TTTTT|T
-TTXTT|T
-TTXXT|T
-TTXXT|T
-TTXXX|X
-XXXTX|X
-XTTTT|X
-TTXTT|X
-XXXTT|X
-XXXTX|X
-XXXXX|T
-TXTXT|X
-XTTXX|X
-TTTXX|T
-XXXTT|X
-XXTTX|T
-TXTTX|X
-XTXXT|T
-XTTXT|X
-TTXXX|T
-TTXTT|X
-TTXXT|X
-XTTXX|X
-XXXXX|X
-XTTXX|T
-TTTXX|X
-TTXTX|X
-XTXXX|X
-XTTTX|X
-TTTXT|X
-TXTXT|T
-XXXTX|X
-XXTXT|T
-TTTTT|T
-XXTXT|T
-XXTXX|T
-XXXXT|T
-XXXXT|X
-TTTXX|X
-TTXTX|T
-XXXTT|T
-XTTTT|X
-XXTTX|X
-XTXXX|T
-TTTTT|X
-TXXTX|T
-XTXXT|T
-XTTTX|X
-TTXXT|T
-TTTXT|T
-TXTTX|T
-TTTXX|T
-`;
+// ================== THUẬT TOÁN PHÂN TÍCH NÂNG CAO ==================
 
+const ADVANCED_PATTERN = {
+    "T,T,T,T,T,T,T": {"prediction": "X", "probability": 85, "description": "Chuỗi Tài dài hiếm gặp, khả năng cao đảo chiều"},
+    "X,X,X,X,X,X,X": {"prediction": "T", "probability": 85, "description": "Chuỗi Xỉu dài hiếm gặp, khả năng cao đảo chiều"},
+    "T,X,T,X,T,X,T": {"prediction": "X", "probability": 75, "description": "Xu hướng xen kẽ, khả năng tiếp tục"},
+    "X,T,X,T,X,T,X": {"prediction": "T", "probability": 75, "description": "Xu hướng xen kẽ, khả năng tiếp tục"},
+    "T,T,X,X,T,T,X": {"prediction": "X", "probability": 70, "description": "Mẫu lặp lại, khả năng tiếp tục"},
+    "X,X,T,T,X,X,T": {"prediction": "T", "probability": 70, "description": "Mẫu lặp lại, khả năng tiếp tục"},
+    "T,T,T,X,X,X,T": {"prediction": "T", "probability": 65, "description": "Xu hướng đảo chiều sớm"},
+    "X,X,X,T,T,T,X": {"prediction": "X", "probability": 65, "description": "Xu hướng đảo chiều sớm"}
+};
 
-const ruleMap = new Map();
-ruleLines.split('\n').forEach(line => {
-  const [pattern, result] = line.trim().split('|');
-  if (pattern && result) ruleMap.set(pattern.trim(), result.trim());
-});
+const SUNWIN_ALGORITHM = {
+    "3-10": {"tai": 0, "xiu": 100},
+    "11": {"tai": 10, "xiu": 90},
+    "12": {"tai": 20, "xiu": 80},
+    "13": {"tai": 35, "xiu": 65},
+    "14": {"tai": 45, "xiu": 55},
+    "15": {"tai": 65, "xiu": 35},
+    "16": {"tai": 80, "xiu": 20},
+    "17": {"tai": 90, "xiu": 10},
+    "18": {"tai": 100, "xiu": 0}
+};
 
-function predictResult(history) {
-  const last5 = history.slice(-5);
-  const prediction = ruleMap.get(last5) || "Không rõ";
-  const confidence = prediction === "Tài" || prediction === "Xỉu" ? "67.86%" : "0%";
-  return { prediction, confidence, pattern: last5 };
+function isCauDep(patternStr) {
+    const beautifulPatterns = ["TXTXTX", "XTXTXT", "TTXXTTXX", "XXTTXXTT", "TTXTTX", "XXTXXT"];
+    return beautifulPatterns.some(p => patternStr.includes(p));
 }
+
+function isCauXau(patternStr) {
+    const uglyPatterns = ["TTTTTT", "XXXXXX", "TTXXTX", "XXTTXT", "TXXTXX", "XTTXTT"];
+    return uglyPatterns.some(p => patternStr.includes(p));
+}
+
+function analyzeAdvancedPattern(history) {
+    if (history.length < 7) {
+        return { prediction: null, confidence: 0, details: null };
+    }
+
+    const patternStr = history.slice(0, 7).map(s => s.result[0].toUpperCase()).join(',');
+    const cauText = patternStr.replace(/,/g, "");
+    let prediction = null;
+    let confidence = 0;
+    const details = [];
+
+    if (ADVANCED_PATTERN[patternStr]) {
+        const data = ADVANCED_PATTERN[patternStr];
+        prediction = data.prediction === "T" ? "Tài" : "Xỉu";
+        confidence = data.probability;
+        details.push(data.description);
+    }
+
+    if (isCauDep(cauText)) {
+        details.push("Cầu đẹp ✅");
+    } else if (isCauXau(cauText)) {
+        details.push("Cầu xấu ⚠️");
+    }
+
+    return { prediction, confidence, details: details.length > 0 ? details.join(" | ") : null };
+}
+
+function analyzeBigStreak(history) {
+    if (history.length < 2) {
+        return { prediction: null, confidence: 0 };
+    }
+
+    let currentStreak = 1;
+    const currentResult = history[0].result;
+
+    for (let i = 1; i < history.length; i++) {
+        if (history[i].result === currentResult) {
+            currentStreak++;
+        } else {
+            break;
+        }
+    }
+
+    if (currentStreak >= 3) {
+        const lastTotal = history[0].total;
+        let confidence;
+        if (currentResult === "Tài") {
+            confidence = lastTotal >= 17 ? Math.min(95 + (currentStreak - 3) * 5, 99) : Math.min(90 + (currentStreak - 3) * 5, 98);
+        } else { // Xỉu
+            confidence = lastTotal <= 10 ? Math.min(95 + (currentStreak - 3) * 5, 99) : Math.min(90 + (currentStreak - 3) * 5, 98);
+        }
+        return { prediction: currentResult, confidence };
+    }
+
+    return { prediction: null, confidence: 0 };
+}
+
+function analyzeSumTrend(history) {
+    if (history.length === 0) {
+        return { prediction: null, confidence: 0 };
+    }
+
+    const lastSum = history[0].total;
+    let sumStats;
+    
+    if (lastSum >= 3 && lastSum <= 10) {
+        sumStats = SUNWIN_ALGORITHM["3-10"];
+    } else {
+        sumStats = SUNWIN_ALGORITHM[String(lastSum)];
+    }
+
+    if (sumStats) {
+        if (sumStats.tai === 100) return { prediction: "Tài", confidence: 95 };
+        if (sumStats.xiu === 100) return { prediction: "Xỉu", confidence: 95 };
+        
+        return sumStats.tai > sumStats.xiu 
+            ? { prediction: "Tài", confidence: sumStats.tai } 
+            : { prediction: "Xỉu", confidence: sumStats.xiu };
+    }
+
+    return { prediction: null, confidence: 0 };
+}
+
+function patternPredict(history) {
+    if (!history || history.length === 0) {
+        return { prediction: "Tài", confidence: 50, details: "Lịch sử rỗng, dự đoán ngẫu nhiên" };
+    }
+
+    const { prediction: streakPred, confidence: streakConf } = analyzeBigStreak(history);
+    if (streakPred && streakConf > 75) {
+        return { prediction: streakPred, confidence: streakConf, details: `Bệt ${streakPred} (${streakConf}%)` };
+    }
+
+    const { prediction: advPred, confidence: advConf, details: advDetails } = analyzeAdvancedPattern(history);
+    if (advPred && advConf > 70) {
+        return { prediction: advPred, confidence: advConf, details: advDetails };
+    }
+
+    const { prediction: sumPred, confidence: sumConf } = analyzeSumTrend(history);
+    if (sumPred && sumConf > 80) {
+        return { prediction: sumPred, confidence: sumConf, details: `Phân tích tổng điểm (${sumConf}%)` };
+    }
+
+    const lastSession = history[0];
+    const defaultPred = lastSession.total >= 11 ? "Tài" : "Xỉu";
+    return { prediction: defaultPred, confidence: 55, details: "Dự đoán cơ bản" };
+}
+
+
+// ================== KẾT NỐI VÀ XỬ LÝ DỮ LIỆU =====================
 
 const messagesToSend = [
   [1, "MiniGame", "SC_thataoduocko112233", "112233", {
@@ -352,14 +216,15 @@ function connectWebSocket() {
           const { d1, d2, d3 } = data[1];
           const total = d1 + d2 + d3;
           const result = total > 10 ? "Tài" : "Xỉu";
-          const symbol = result === "Tài" ? "T" : "X";
-
-          historyString += symbol;
-          if (historyString.length > 100) {
-            historyString = historyString.slice(-100);
+          
+          // Thêm kết quả mới vào đầu mảng lịch sử
+          history.unshift({ result: result, total: total });
+          if (history.length > 100) { // Giới hạn lịch sử ở 100 phiên gần nhất
+            history.pop();
           }
 
-          const { prediction, confidence, pattern } = predictResult(historyString);
+          // Gọi thuật toán dự đoán mới
+          const { prediction, confidence, details } = patternPredict(history);
 
           currentData = {
             phien_truoc: id_phien_chua_co_kq,
@@ -367,13 +232,13 @@ function connectWebSocket() {
             Dice: [d1, d2, d3],
             phien_hien_tai: id_phien_chua_co_kq + 1,
             du_doan: prediction,
-            do_tin_cay: confidence,
-            cau: pattern,
+            do_tin_cay: `${confidence.toFixed(2)}%`,
+            cau: details || "Đang chờ dữ liệu...",
             ngay: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
             Id: "Rinkivana"
           };
 
-          console.log(`[LOG] Phiên ${id_phien_chua_co_kq} → ${d1}-${d2}-${d3} = ${total} (${result})`);
+          console.log(`[LOG] Phiên ${id_phien_chua_co_kq} → ${d1}-${d2}-${d3} = ${total} (${result}) | Dự đoán: ${prediction} (${confidence.toFixed(2)}%) - ${details}`);
           id_phien_chua_co_kq = null;
         }
       }
@@ -402,3 +267,4 @@ app.listen(PORT, () => {
   console.log(`[LOG] Server đang chạy tại http://localhost:${PORT}`);
   connectWebSocket();
 });
+  
