@@ -8,20 +8,26 @@ const PORT = process.env.PORT || 5000;
 
 // === Biến lưu trạng thái ===
 let currentData = {
-  id: "rinki",
+  id: "binhtool90",
   id_phien: null,
   ket_qua: "",
   pattern: "",
   du_doan: "?"
 };
 let id_phien_chua_co_kq = null;
-let patternHistory = []; // Lưu dãy T/X gần nhất
+let patternHistory = [];
 
 // === Danh sách tin nhắn gửi lên server WebSocket ===
 const messagesToSend = [
   [1, "MiniGame", "SC_thataoduocko112233", "112233", {
-    "info": "{\"ipAddress\":\"2402:800:62cd:ef90:a445:40de:a24a:765e",\"userId\":\"1a46e9cd-135d-4f29-9cd5-0b61bd2fb2a9\",\"username\":\"SC_thataoduocko112233\",\"timestamp\":1752257356729,\"refreshToken\":\"fe70e712cf3c4737a4ae22cbb3700c8e.f413950acf984ed6b373906f83a4f796\"}",
-    "signature": "16916AC7F4F163CD00B319824B5B90FFE11BC5E7D232D58E7594C47E271A5CDE0492BB1C3F3FF20171B3A344BEFEAA5C4E9D28800CF18880FEA6AC3770016F2841FA847063B80AF8C8A747A689546CE75E99A7B559612BC30FBA5FED9288B69013C099FD6349ABC2646D5ECC2D5B2A1C5A9817FE5587844B41C752D0A0F6F304"
+    info: {
+      ipAddress: "2402:800:62cd:ef90:a445:40de:a24a:765e",
+      userId: "1a46e9cd-135d-4f29-9cd5-0b61bd2fb2a9",
+      username: "SC_thataoduocko112233",
+      timestamp: 1752257356729,
+      refreshToken: "fe70e712cf3c4737a4ae22cbb3700c8e.f413950acf984ed6b373906f83a4f796"
+    },
+    signature: "16916AC7F4F163CD00B319824B5B90FFE11BC5E7D232D58E7594C47E271A5CDE0492BB1C3F3FF20171B3A344BEFEAA5C4E9D28800CF18880FEA6AC3770016F2841FA847063B80AF8C8A747A689546CE75E99A7B559612BC30FBA5FED9288B69013C099FD6349ABC2646D5ECC2D5B2A1C5A9817FE5587844B41C752D0A0F6F304"
   }],
   [6, "MiniGame", "taixiuPlugin", { cmd: 1005 }],
   [6, "MiniGame", "lobbyPlugin", { cmd: 10001 }]
@@ -39,11 +45,9 @@ function duDoanTiepTheo(pattern) {
   const last3 = pattern.slice(-3).join('');
   const last4 = pattern.slice(-4).join('');
 
-  // Kiểm tra nếu 3 ký tự cuối lặp (vd: TXT → TXT)
   const count = pattern.join('').split(last3).length - 1;
-  if (count >= 2) return last3[0]; // đoán tiếp theo là chữ đầu chuỗi
+  if (count >= 2) return last3[0];
 
-  // Nếu thấy lặp 2 lần gần đây
   const count4 = pattern.join('').split(last4).length - 1;
   if (count4 >= 2) return last4[0];
 
@@ -51,7 +55,7 @@ function duDoanTiepTheo(pattern) {
 }
 
 function connectWebSocket() {
-  ws = new WebSocket("wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0", {
+  ws = new WebSocket("wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfdGhhdGFvZHVvY2tvMTEyMjMzIn0.nDkpWqUt3hXIX_8I4qPUOBV9sPMyyoGZwPAjxK8GnSg", {
     headers: {
       "User-Agent": "Mozilla/5.0",
       "Origin": "https://play.sun.win"
@@ -92,15 +96,13 @@ function connectWebSocket() {
         if (cmd === 1003 && data[1].gBB) {
           const { d1, d2, d3 } = data[1];
           const total = d1 + d2 + d3;
-          const result = total > 10 ? "T" : "X"; // Tài / Xỉu
+          const result = total > 10 ? "T" : "X";
 
-          // Lưu pattern
           patternHistory.push(result);
           if (patternHistory.length > 20) patternHistory.shift();
 
           const text = `${d1}-${d2}-${d3} = ${total} (${result === 'T' ? 'Tài' : 'Xỉu'})`;
 
-          // Dự đoán
           const du_doan = duDoanTiepTheo(patternHistory);
 
           currentData = {
@@ -116,7 +118,7 @@ function connectWebSocket() {
         }
       }
     } catch (e) {
-      console.error('[Lỗi]:', e.message);
+      console.error('[Lỗi JSON]:', e.message);
     }
   });
 
