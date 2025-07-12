@@ -217,28 +217,32 @@ function connectWebSocket() {
           const total = d1 + d2 + d3;
           const result = total > 10 ? "Tài" : "Xỉu";
           
-          // Thêm kết quả mới vào đầu mảng lịch sử
           history.unshift({ result: result, total: total });
-          if (history.length > 100) { // Giới hạn lịch sử ở 100 phiên gần nhất
+          if (history.length > 100) {
             history.pop();
           }
 
-          // Gọi thuật toán dự đoán mới
+          // Gọi thuật toán dự đoán gốc
           const { prediction, confidence, details } = patternPredict(history);
+          
+          // === LOGIC ĐẢO NGƯỢC DỰ ĐOÁN THEO YÊU CẦU ===
+          const duDoanDaoNguoc = prediction === "Tài" ? "Xỉu" : "Tài";
+          // ===========================================
 
           currentData = {
             phien_truoc: id_phien_chua_co_kq,
             ket_qua: result,
             Dice: [d1, d2, d3],
             phien_hien_tai: id_phien_chua_co_kq + 1,
-            du_doan: prediction,
+            du_doan: duDoanDaoNguoc, // <-- Sử dụng dự đoán đã đảo ngược
             do_tin_cay: `${confidence.toFixed(2)}%`,
             cau: details || "Đang chờ dữ liệu...",
             ngay: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
             Id: "Rinkivana"
           };
-
-          console.log(`[LOG] Phiên ${id_phien_chua_co_kq} → ${d1}-${d2}-${d3} = ${total} (${result}) | Dự đoán: ${prediction} (${confidence.toFixed(2)}%) - ${details}`);
+          
+          // Cập nhật log để hiển thị cả 2 dự đoán cho dễ debug
+          console.log(`[LOG] Phiên ${id_phien_chua_co_kq} → ${d1}-${d2}-${d3} = ${total} (${result}) | Dự đoán GỐC: ${prediction} → Đảo ngược: ${duDoanDaoNguoc} (${confidence.toFixed(2)}%) - ${details}`);
           id_phien_chua_co_kq = null;
         }
       }
@@ -260,11 +264,11 @@ function connectWebSocket() {
 app.get('/taixiu', (req, res) => res.json(currentData));
 
 app.get('/', (req, res) => {
-  res.send(`<h2>Sunwin Tài Xỉu API</h2><p><a href="/taixiu">Xem kết quả JSON</a></p>`);
+  res.send(`<h2>Sunwin Tài Xỉu API (Đã đảo ngược)</h2><p><a href="/taixiu">Xem kết quả JSON</a></p>`);
 });
 
 app.listen(PORT, () => {
   console.log(`[LOG] Server đang chạy tại http://localhost:${PORT}`);
   connectWebSocket();
 });
-  
+           
