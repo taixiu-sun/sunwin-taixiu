@@ -1,15 +1,13 @@
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-
-// Nhập thuật toán dự đoán từ file matchrandom.js
 const { du_doan_matchrandom } = require('./matchrandom.js');
 
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 5000;
 
-// Dữ liệu hiện tại sẽ được trả về qua API
+// Thêm percent_tai và percent_xiu vào cấu trúc dữ liệu
 let currentData = {
   "phien_truoc": null,
   "ket_qua": "Đang chờ...",
@@ -17,39 +15,34 @@ let currentData = {
   "phien_hien_tai": null,
   "du_doan": "Đang chờ phiên mới...",
   "do_tin_cay": "0%",
+  "percent_tai": "0%",
+  "percent_xiu": "0%",
   "cau": "Chưa có dữ liệu",
   "ngay": "",
   "Id": "Rinkivana"
 };
 
-let history = []; // Mảng lưu trữ lịch sử các phiên
+let history = [];
 
-// Hàm phân tích xu hướng (giữ lại từ code gốc)
 function pt_xh(ls) {
-    if (ls.length < 5) {
-        return "Chưa đủ dữ liệu để phân tích xu hướng";
-    }
+    if (ls.length < 5) return "Chưa đủ dữ liệu để phân tích xu hướng";
     let dem_t = ls.filter(s => s.result === "Tài").length;
     const dem_x = ls.length - dem_t;
-
     let chuoi_ht = 1;
     const kq_ht = ls[0].result;
     for (let i = 1; i < ls.length; i++) {
         if (ls[i].result === kq_ht) chuoi_ht++;
         else break;
     }
-
     let tt_chuoi = chuoi_ht >= 3 ? `Cầu ${kq_ht} ${chuoi_ht} nút` : "";
     let pt_tong = "";
     const tong_diem_c = ls[0].total;
     if (tong_diem_c <= 10) pt_tong = `Tổng thấp (${tong_diem_c})`;
     else if (tong_diem_c >= 17) pt_tong = `Tổng cao (${tong_diem_c})`;
-
     let mo_ta_xh = `Xu hướng ${dem_t > dem_x ? `Tài (${dem_t}/${ls.length})` : dem_x > dem_t ? `Xỉu (${dem_x}/${ls.length})` : 'cân bằng'}`;
     return [mo_ta_xh, tt_chuoi, pt_tong].filter(Boolean).join(", ");
 }
 
-// Các tin nhắn cần gửi khi kết nối WebSocket thành công
 const messagesToSend = [
   [1, "MiniGame", "SC_thataoduocko112233", "112233", {
     "info": "{\"ipAddress\":\"2402:800:62cd:ef90:a445:40de:a24a:765e\",\"userId\":\"1a46e9cd-135d-4f29-9cd5-0b61bd2fb2a9\",\"username\":\"SC_thataoduocko112233\",\"timestamp\":1752257356729,\"refreshToken\":\"fe70e712cf3c4737a4ae22cbb3700c8e.f413950acf984ed6b373906f83a4f796\"}",
@@ -61,25 +54,15 @@ const messagesToSend = [
 
 function connectWebSocket() {
   const ws = new WebSocket("wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0", {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-      "Origin": "https://play.sun.win"
-    }
+    headers: {"User-Agent": "Mozilla/5.0", "Origin": "https://play.sun.win"}
   });
 
   ws.on('open', () => {
     console.log('[LOG] WebSocket đã kết nối thành công.');
     messagesToSend.forEach((msg, i) => {
-      setTimeout(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(msg));
-        }
-      }, i * 600);
+      setTimeout(() => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }, i * 600);
     });
-
-    setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.ping();
-    }, 15000);
+    setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.ping(); }, 15000);
   });
 
   ws.on('pong', () => console.log('[LOG] Ping... Pong! Kết nối vẫn ổn định.'));
@@ -88,42 +71,38 @@ function connectWebSocket() {
     try {
       const data = JSON.parse(message);
       if (!Array.isArray(data) || typeof data[1] !== 'object') return;
-
       const cmd = data[1].cmd;
       const content = data[1];
 
-      // **SỰ KIỆN 1: PHIÊN MỚI BẮT ĐẦU**
       if (cmd === 1008 && content.sid) {
         currentData.phien_hien_tai = content.sid;
         currentData.ket_qua = "Đang chờ...";
         currentData.Dice = [];
         
-        // **GỌI DỰ ĐOÁN NGAY LẬP TỨC**
-        const [prediction, confidence] = du_doan_matchrandom(history);
+        // Nhận 4 giá trị trả về từ hàm dự đoán
+        const [prediction, confidence, percent_tai, percent_xiu] = du_doan_matchrandom(history);
+
+        // Cập nhật vào currentData
         currentData.du_doan = prediction;
-        currentData.do_tin_cay = `${confidence.toFixed(2)}%`;
+        currentData.do_tin_cay = `${parseFloat(confidence).toFixed(2)}%`;
+        currentData.percent_tai = `${parseFloat(percent_tai).toFixed(2)}%`;
+        currentData.percent_xiu = `${parseFloat(percent_xiu).toFixed(2)}%`;
         currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 
-        console.log(`\n[PHIÊN MỚI] Bắt đầu phiên ${content.sid}. Dự đoán: ${prediction} (${confidence.toFixed(2)}%)`);
+        console.log(`\n[PHIÊN MỚI] Bắt đầu phiên ${content.sid}. Dự đoán: ${prediction} (${parseFloat(confidence).toFixed(2)}%) | TÀI: ${parseFloat(percent_tai).toFixed(2)}% - XỈU: ${parseFloat(percent_xiu).toFixed(2)}%`);
       }
 
-      // **SỰ KIỆN 2: CÓ KẾT QUẢ PHIÊN CŨ**
       if (cmd === 1003 && content.gBB) {
         const { d1, d2, d3, sid } = content;
         const total = d1 + d2 + d3;
         const result = total > 10 ? "Tài" : "Xỉu";
-        
-        // Cập nhật lịch sử
         history.unshift({ result, total });
         if (history.length > 100) history.pop();
-
-        // Cập nhật thông tin cho phiên vừa kết thúc
         currentData.phien_truoc = sid;
         currentData.ket_qua = result;
         currentData.Dice = [d1, d2, d3];
         currentData.cau = pt_xh(history);
         currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-        
         console.log(`[KẾT QUẢ] Phiên ${sid} → ${d1}-${d2}-${d3} = ${total} (${result})`);
       }
     } catch (err) {
@@ -136,20 +115,12 @@ function connectWebSocket() {
     setTimeout(connectWebSocket, 3000);
   });
 
-  ws.on('error', (err) => {
-    console.error('[ERROR] Lỗi WebSocket:', err.message);
-  });
+  ws.on('error', (err) => console.error('[ERROR] Lỗi WebSocket:', err.message));
 }
 
 app.get('/taixiu', (req, res) => res.json(currentData));
-
 app.get('/', (req, res) => {
-  res.send(`
-    <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
-      <h2>🚀 Sunwin Tài Xỉu API by Rinkivana</h2>
-      <p>API đang hoạt động. Truy cập <a href="/taixiu">/taixiu</a> để xem kết quả JSON.</p>
-    </div>
-  `);
+  res.send(`<div style="font-family: sans-serif; text-align: center; padding-top: 50px;"><h2>🚀 Sunwin Tài Xỉu API by Rinkivana</h2><p>API đang hoạt động. Truy cập <a href="/taixiu">/taixiu</a> để xem kết quả JSON.</p></div>`);
 });
 
 app.listen(PORT, () => {
