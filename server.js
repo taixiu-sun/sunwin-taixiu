@@ -2,14 +2,14 @@ const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
 
-// ================== IMPORT YOUR ALGORITHM ==================
+// Nhập thuật toán dự đoán từ file matchrandom.js
 const { du_doan_matchrandom } = require('./matchrandom.js');
-// ===========================================================
 
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 5000;
 
+// Dữ liệu hiện tại sẽ được trả về qua API
 let currentData = {
   "phien_truoc": null,
   "ket_qua": "",
@@ -23,21 +23,14 @@ let currentData = {
 };
 
 let id_phien_chua_co_kq = null;
-let history = []; // Sử dụng mảng đối tượng thay vì chuỗi
+let history = []; // Mảng lưu trữ lịch sử các phiên
 
-// ================== OLD ALGORITHM (Can be removed or kept for reference) ==================
-// The old functions like pt_cau, pt_diem, tim_cau, and the old du_doan can be deleted
-// if they are no longer needed. We'll leave pt_xh as it's used for trend analysis.
-
+// Hàm phân tích xu hướng (giữ lại từ code gốc)
 function pt_xh(ls) {
     if (ls.length < 5) {
         return "Chưa đủ dữ liệu để phân tích xu hướng";
     }
-
-    let dem_t = 0;
-    ls.forEach(s => {
-        if (s.result === "Tài") dem_t++;
-    });
+    let dem_t = ls.filter(s => s.result === "Tài").length;
     const dem_x = ls.length - dem_t;
 
     let chuoi_ht = 1;
@@ -47,31 +40,17 @@ function pt_xh(ls) {
         else break;
     }
 
-    let tt_chuoi = "";
-    if (chuoi_ht >= 3) {
-        tt_chuoi = `Cầu ${kq_ht} ${chuoi_ht} nút`;
-    }
-
+    let tt_chuoi = chuoi_ht >= 3 ? `Cầu ${kq_ht} ${chuoi_ht} nút` : "";
     let pt_tong = "";
     const tong_diem_c = ls[0].total;
     if (tong_diem_c <= 10) pt_tong = `Tổng thấp (${tong_diem_c})`;
     else if (tong_diem_c >= 17) pt_tong = `Tổng cao (${tong_diem_c})`;
 
-    let mo_ta_xh = "";
-    if (dem_t > dem_x) mo_ta_xh = `Xu hướng Tài (${dem_t}/${ls.length})`;
-    else if (dem_x > dem_t) mo_ta_xh = `Xu hướng Xỉu (${dem_x}/${ls.length})`;
-    else mo_ta_xh = "Xu hướng cân bằng";
-
-    let xh_day_du = mo_ta_xh;
-    if (tt_chuoi) xh_day_du += ", " + tt_chuoi;
-    if (pt_tong) xh_day_du += ", " + pt_tong;
-
-    return xh_day_du;
+    let mo_ta_xh = `Xu hướng ${dem_t > dem_x ? `Tài (${dem_t}/${ls.length})` : dem_x > dem_t ? `Xỉu (${dem_x}/${ls.length})` : 'cân bằng'}`;
+    return [mo_ta_xh, tt_chuoi, pt_tong].filter(Boolean).join(", ");
 }
 
-
-// ================== KẾT NỐI VÀ XỬ LÝ DỮ LIỆU =====================
-
+// Các tin nhắn cần gửi khi kết nối WebSocket thành công
 const messagesToSend = [
   [1, "MiniGame", "SC_thataoduocko112233", "112233", {
     "info": "{\"ipAddress\":\"2402:800:62cd:ef90:a445:40de:a24a:765e\",\"userId\":\"1a46e9cd-135d-4f29-9cd5-0b61bd2fb2a9\",\"username\":\"SC_thataoduocko112233\",\"timestamp\":1752257356729,\"refreshToken\":\"fe70e712cf3c4737a4ae22cbb3700c8e.f413950acf984ed6b373906f83a4f796\"}",
@@ -90,7 +69,7 @@ function connectWebSocket() {
   });
 
   ws.on('open', () => {
-    console.log('[LOG] WebSocket kết nối');
+    console.log('[LOG] WebSocket đã kết nối thành công.');
     messagesToSend.forEach((msg, i) => {
       setTimeout(() => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -100,55 +79,49 @@ function connectWebSocket() {
     });
 
     setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.ping();
-      }
+      if (ws.readyState === WebSocket.OPEN) ws.ping();
     }, 15000);
   });
 
-  ws.on('pong', () => console.log('[LOG] Ping OK'));
+  ws.on('pong', () => console.log('[LOG] Ping... Pong! Kết nối vẫn ổn định.'));
 
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      if (Array.isArray(data) && typeof data[1] === 'object') {
-        const cmd = data[1].cmd;
+      if (!Array.isArray(data) || typeof data[1] !== 'object') return;
 
-        if (cmd === 1008 && data[1].sid) {
-          id_phien_chua_co_kq = data[1].sid;
-        }
+      const cmd = data[1].cmd;
 
-        if (cmd === 1003 && data[1].gBB) {
-          const { d1, d2, d3 } = data[1];
-          const total = d1 + d2 + d3;
-          const result = total > 10 ? "Tài" : "Xỉu";
-          
-          history.unshift({ result: result, total: total });
-          if (history.length > 100) {
-            history.pop();
-          }
+      if (cmd === 1008 && data[1].sid) {
+        id_phien_chua_co_kq = data[1].sid;
+      }
 
-          // ================== USE THE IMPORTED ALGORITHM ==================
-          const [prediction, confidence] = du_doan_matchrandom(history);
-          // ================================================================
-          
-          const trendAnalysis = pt_xh(history);
+      if (cmd === 1003 && data[1].gBB) {
+        const { d1, d2, d3 } = data[1];
+        const total = d1 + d2 + d3;
+        const result = total > 10 ? "Tài" : "Xỉu";
+        
+        history.unshift({ result, total });
+        if (history.length > 100) history.pop();
 
-          currentData = {
-            phien_truoc: id_phien_chua_co_kq,
-            ket_qua: result,
-            Dice: [d1, d2, d3],
-            phien_hien_tai: id_phien_chua_co_kq + 1,
-            du_doan: prediction,
-            do_tin_cay: `${confidence.toFixed(2)}%`,
-            cau: trendAnalysis,
-            ngay: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
-            Id: "Rinkivana"
-          };
-          
-          console.log(`[LOG] Phiên ${id_phien_chua_co_kq} → ${d1}-${d2}-${d3} = ${total} (${result}) | Dự đoán: ${prediction} (${confidence.toFixed(2)}%) - ${trendAnalysis}`);
-          id_phien_chua_co_kq = null;
-        }
+        // Sử dụng thuật toán đã nhập từ file matchrandom.js
+        const [prediction, confidence] = du_doan_matchrandom(history);
+        const trendAnalysis = pt_xh(history);
+
+        currentData = {
+          phien_truoc: id_phien_chua_co_kq,
+          ket_qua: result,
+          Dice: [d1, d2, d3],
+          phien_hien_tai: id_phien_chua_co_kq + 1,
+          du_doan: prediction,
+          do_tin_cay: `${confidence.toFixed(2)}%`,
+          cau: trendAnalysis,
+          ngay: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
+          Id: "Rinkivana"
+        };
+        
+        console.log(`[LOG] Phiên ${id_phien_chua_co_kq} → ${d1}-${d2}-${d3} = ${total} (${result}) | Dự đoán: ${prediction} (${confidence.toFixed(2)}%) - ${trendAnalysis}`);
+        id_phien_chua_co_kq = null;
       }
     } catch (err) {
       console.error('[ERROR] Lỗi xử lý dữ liệu:', err.message);
@@ -156,19 +129,24 @@ function connectWebSocket() {
   });
 
   ws.on('close', () => {
-    console.log('[WARN] WebSocket mất kết nối. Đang thử lại sau 2s...');
-    setTimeout(connectWebSocket, 2500);
+    console.warn('[WARN] WebSocket đã mất kết nối. Thử lại sau 3 giây...');
+    setTimeout(connectWebSocket, 3000);
   });
 
   ws.on('error', (err) => {
-    console.error('[ERROR] WebSocket lỗi:', err.message);
+    console.error('[ERROR] Lỗi WebSocket:', err.message);
   });
 }
 
 app.get('/taixiu', (req, res) => res.json(currentData));
 
 app.get('/', (req, res) => {
-  res.send(`<h2>Sunwin Tài Xỉu API</h2><p><a href="/taixiu">Xem kết quả JSON</a></p>`);
+  res.send(`
+    <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+      <h2>🚀 Sunwin Tài Xỉu API by Rinkivana</h2>
+      <p>API đang hoạt động. Truy cập <a href="/taixiu">/taixiu</a> để xem kết quả JSON.</p>
+    </div>
+  `);
 });
 
 app.listen(PORT, () => {
