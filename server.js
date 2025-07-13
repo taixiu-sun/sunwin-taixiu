@@ -12,17 +12,16 @@ const PORT = process.env.PORT || 5000;
 // Dữ liệu hiện tại sẽ được trả về qua API
 let currentData = {
   "phien_truoc": null,
-  "ket_qua": "",
+  "ket_qua": "Đang chờ...",
   "Dice": [],
   "phien_hien_tai": null,
-  "du_doan": "",
-  "do_tin_cay": "",
-  "cau": "",
+  "du_doan": "Đang chờ phiên mới...",
+  "do_tin_cay": "0%",
+  "cau": "Chưa có dữ liệu",
   "ngay": "",
   "Id": "Rinkivana"
 };
 
-let id_phien_chua_co_kq = null;
 let history = []; // Mảng lưu trữ lịch sử các phiên
 
 // Hàm phân tích xu hướng (giữ lại từ code gốc)
@@ -91,37 +90,41 @@ function connectWebSocket() {
       if (!Array.isArray(data) || typeof data[1] !== 'object') return;
 
       const cmd = data[1].cmd;
+      const content = data[1];
 
-      if (cmd === 1008 && data[1].sid) {
-        id_phien_chua_co_kq = data[1].sid;
+      // **SỰ KIỆN 1: PHIÊN MỚI BẮT ĐẦU**
+      if (cmd === 1008 && content.sid) {
+        currentData.phien_hien_tai = content.sid;
+        currentData.ket_qua = "Đang chờ...";
+        currentData.Dice = [];
+        
+        // **GỌI DỰ ĐOÁN NGAY LẬP TỨC**
+        const [prediction, confidence] = du_doan_matchrandom(history);
+        currentData.du_doan = prediction;
+        currentData.do_tin_cay = `${confidence.toFixed(2)}%`;
+        currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+
+        console.log(`\n[PHIÊN MỚI] Bắt đầu phiên ${content.sid}. Dự đoán: ${prediction} (${confidence.toFixed(2)}%)`);
       }
 
-      if (cmd === 1003 && data[1].gBB) {
-        const { d1, d2, d3 } = data[1];
+      // **SỰ KIỆN 2: CÓ KẾT QUẢ PHIÊN CŨ**
+      if (cmd === 1003 && content.gBB) {
+        const { d1, d2, d3, sid } = content;
         const total = d1 + d2 + d3;
         const result = total > 10 ? "Tài" : "Xỉu";
         
+        // Cập nhật lịch sử
         history.unshift({ result, total });
         if (history.length > 100) history.pop();
 
-        // Sử dụng thuật toán đã nhập từ file matchrandom.js
-        const [prediction, confidence] = du_doan_matchrandom(history);
-        const trendAnalysis = pt_xh(history);
-
-        currentData = {
-          phien_truoc: id_phien_chua_co_kq,
-          ket_qua: result,
-          Dice: [d1, d2, d3],
-          phien_hien_tai: id_phien_chua_co_kq + 1,
-          du_doan: prediction,
-          do_tin_cay: `${confidence.toFixed(2)}%`,
-          cau: trendAnalysis,
-          ngay: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
-          Id: "Rinkivana"
-        };
+        // Cập nhật thông tin cho phiên vừa kết thúc
+        currentData.phien_truoc = sid;
+        currentData.ket_qua = result;
+        currentData.Dice = [d1, d2, d3];
+        currentData.cau = pt_xh(history);
+        currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
         
-        console.log(`[LOG] Phiên ${id_phien_chua_co_kq} → ${d1}-${d2}-${d3} = ${total} (${result}) | Dự đoán: ${prediction} (${confidence.toFixed(2)}%) - ${trendAnalysis}`);
-        id_phien_chua_co_kq = null;
+        console.log(`[KẾT QUẢ] Phiên ${sid} → ${d1}-${d2}-${d3} = ${total} (${result})`);
       }
     } catch (err) {
       console.error('[ERROR] Lỗi xử lý dữ liệu:', err.message);
