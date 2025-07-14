@@ -1,13 +1,13 @@
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-const { predictNext } = require('./matchrandom.js'); // Import hàm dự đoán mới
+const { predictNext } = require('./matchrandom.js'); // Import thuật toán từ file riêng
 
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 5000;
 
-// Cấu trúc dữ liệu trả về cho client
+// Dữ liệu trả về cho client
 let currentData = {
   "phien_truoc": null,
   "ket_qua": "Đang chờ...",
@@ -22,11 +22,10 @@ let currentData = {
   "Id": "@ghetvietcode - Rinkivana"
 };
 
-let history = []; // Lịch sử các phiên đã qua (tối đa 100)
+let history = []; // Lịch sử các phiên (tối đa 100)
 
-// Hàm phân tích xu hướng (giữ nguyên)
 function pt_xh(ls) {
-    if (ls.length < 5) return "Chưa đủ dữ liệu để phân tích xu hướng";
+    if (ls.length < 3) return "Chưa đủ dữ liệu";
     const dem_t = ls.filter(s => s.result === "Tài").length;
     const dem_x = ls.length - dem_t;
     const kq_ht = ls[0].result;
@@ -35,8 +34,8 @@ function pt_xh(ls) {
         if (item.result === kq_ht) chuoi_ht++;
         else break;
     }
-    const tt_chuoi = chuoi_ht >= 3 ? `Cầu ${kq_ht} ${chuoi_ht} phiên` : "Cầu 1-1 hoặc 2-1";
-    const mo_ta_xh = `Xu hướng ${dem_t > dem_x ? `Tài (${dem_t}/${ls.length})` : dem_x > dem_t ? `Xỉu (${dem_x}/${ls.length})` : 'cân bằng'}`;
+    const tt_chuoi = chuoi_ht >= 3 ? `Cầu ${kq_ht} ${chuoi_ht}` : "Cầu ngắn";
+    const mo_ta_xh = dem_t > dem_x ? `Thiên Tài (${dem_t}-${dem_x})` : dem_x > dem_t ? `Thiên Xỉu (${dem_x}-${dem_t})` : `Cân bằng (${dem_t}-${dem_x})`;
     return `${mo_ta_xh}, ${tt_chuoi}`;
 }
 
@@ -62,52 +61,46 @@ function connectWebSocket() {
     setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.ping(); }, 15000);
   });
 
-  ws.on('pong', () => console.log('[LOG] Ping... Pong! Kết nối vẫn ổn định.'));
-
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
       if (!Array.isArray(data) || typeof data[1] !== 'object') return;
-      const cmd = data[1].cmd;
+      
       const content = data[1];
+      const cmd = content.cmd;
 
-      // Khi có phiên mới
-      if (cmd === 1008 && content.sid) { 
+      if (cmd === 1008 && content.sid) {
         currentData.phien_hien_tai = content.sid;
-        currentData.ket_qua = "Đang chờ...";
-        currentData.Dice = [];
         
-        // Gọi hàm dự đoán mới và nhận 4 giá trị trả về
-        const [prediction, confidence, percent_tai, percent_xiu] = predictNext(history);
+        // Gọi hàm dự đoán và nhận kết quả
+        const [prediction, confidence, percentTai, percentXiu] = predictNext(history);
 
-        // Cập nhật vào currentData
+        // Cập nhật dữ liệu
         currentData.du_doan = prediction;
         currentData.do_tin_cay = `${parseFloat(confidence).toFixed(2)}%`;
-        currentData.percent_tai = `${parseFloat(percent_tai).toFixed(2)}%`;
-        currentData.percent_xiu = `${parseFloat(percent_xiu).toFixed(2)}%`;
+        currentData.percent_tai = `${parseFloat(percentTai).toFixed(2)}%`;
+        currentData.percent_xiu = `${parseFloat(percentXiu).toFixed(2)}%`;
         currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 
-        console.log(`\n[PHIÊN MỚI] Bắt đầu phiên ${content.sid}. Dự đoán: ${prediction} (${parseFloat(confidence).toFixed(2)}%) | TÀI: ${parseFloat(percent_tai).toFixed(2)}% - XỈU: ${parseFloat(percent_xiu).toFixed(2)}%`);
+        console.log(`\n[PHIÊN MỚI] Bắt đầu phiên ${content.sid}. Dự đoán: ${prediction} (${confidence.toFixed(2)}%)`);
       }
 
-      // Khi có kết quả phiên
-      if (cmd === 1003 && content.gBB) { 
+      if (cmd === 1003 && content.gBB) {
         const { d1, d2, d3, sid } = content;
-        const total = d1 + d2 + d3;
-        const result = total > 10 ? "Tài" : "Xỉu";
-        
-        // Chỉ thêm vào lịch sử nếu phiên này chưa tồn tại để tránh trùng lặp
-        if (!history.some(item => item.sid === sid)) {
-            // Thêm dữ liệu xúc xắc vào lịch sử
-            history.unshift({ result, total, sid, dice: [d1, d2, d3] }); 
-            if (history.length > 100) history.pop(); // Giới hạn lịch sử 100 phiên
+        if (!history.some(h => h.sid === sid)) {
+            const total = d1 + d2 + d3;
+            const result = total > 10 ? "Tài" : "Xỉu";
+            
+            // Lưu đầy đủ thông tin vào lịch sử
+            history.unshift({ result, total, sid, dice: [d1, d2, d3] });
+            if (history.length > 100) history.pop();
 
             currentData.phien_truoc = sid;
             currentData.ket_qua = result;
             currentData.Dice = [d1, d2, d3];
             currentData.cau = pt_xh(history);
-            currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-            console.log(`[KẾT QUẢ] Phiên ${sid} → ${d1}-${d2}-${d3} = ${total} (${result})`);
+            
+            console.log(`[KẾT QUẢ] Phiên ${sid}: ${result} (${total})`);
         }
       }
     } catch (err) {
@@ -116,7 +109,7 @@ function connectWebSocket() {
   });
 
   ws.on('close', () => {
-    console.warn('[WARN] WebSocket đã mất kết nối. Thử lại sau 3 giây...');
+    console.warn('[WARN] WebSocket mất kết nối. Thử lại sau 3 giây...');
     setTimeout(connectWebSocket, 3000);
   });
 
@@ -125,7 +118,7 @@ function connectWebSocket() {
 
 app.get('/taixiu', (req, res) => res.json(currentData));
 app.get('/', (req, res) => {
-  res.send(`<div style="font-family: sans-serif; text-align: center; padding-top: 50px;"><h2>🚀 Sunwin Tài Xỉu API by VanwNhat & Rinkivana</h2><p>API đang hoạt động. Truy cập <a href="/taixiu">/taixiu</a> để xem kết quả JSON.</p></div>`);
+  res.send(`<h2>API Tài Xỉu - V2.1 by VanwNhat & Rinkivana</h2><p><a href="/taixiu">Xem JSON</a></p>`);
 });
 
 app.listen(PORT, () => {
