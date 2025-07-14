@@ -1,7 +1,7 @@
 {
-  "name": "sunwin-taixiu-api-v2",
-  "version": "2.0.0",
-  "description": "API for Sunwin Tai Xiu prediction using advanced algorithms",
+  "name": "sunwin-api-v2.1",
+  "version": "2.1.0",
+  "description": "API Sunwin Tài Xỉu với thuật toán tổng hợp",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
