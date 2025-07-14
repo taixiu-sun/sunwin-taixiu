@@ -4,7 +4,7 @@ const crypto = require('crypto');
  * =================================================================
  * BỘ THUẬT TOÁN DỰ ĐOÁN MỚI (CHUYỂN THỂ TỪ PYTHON)
  * Tác giả: VanwNhat & Rinkivana
- * Phiên bản: V2 - Full
+ * Phiên bản: V2.1 - Loại bỏ trạng thái "Chờ"
  * =================================================================
  */
 
@@ -13,25 +13,22 @@ function getTaiXiu(total) {
   return total > 10 ? "Tài" : "Xỉu";
 }
 
-// ===== THUẬT TOÁN 1 (du_doan_v1) =====
+// ===== CÁC THUẬT TOÁN CON (GIỮ NGUYÊN) =====
 function du_doan_v1(totals_list) {
   if (totals_list.length < 4) return ["Chờ", "Đợi thêm dữ liệu"];
   const last_result = getTaiXiu(totals_list.at(-1));
   const last_3 = totals_list.slice(-3);
-
   if (last_3[0] === last_3[2] && last_3[0] !== last_3[1]) {
     return [last_result === "Tài" ? "Xỉu" : "Tài", `Cầu sandwich ${last_3.join('-')}`];
   }
   return [last_result === "Tài" ? "Xỉu" : "Tài", "Cầu 1-1 mặc định"];
 }
 
-// ===== THUẬT TOÁN 2 (du_doan_v2) =====
 function du_doan_v2(totals_list) {
   if (totals_list.length < 4) return ["Chờ", 0, "Chưa đủ dữ liệu"];
   const last_result = getTaiXiu(totals_list.at(-1));
   const last_3 = totals_list.slice(-3);
   const last_4 = totals_list.slice(-4);
-  
   if (last_4[0] === last_4[2] && last_4[0] === last_4[3] && last_4[0] !== last_4[1]) {
     return ["Tài", 85, `Cầu đặc biệt ${last_4.join('-')}`];
   }
@@ -41,7 +38,6 @@ function du_doan_v2(totals_list) {
   return [last_result === "Tài" ? "Xỉu" : "Tài", 71, "Không có cầu đặc biệt, bẻ cầu 1-1"];
 }
 
-// ===== THUẬT TOÁN 3 (du_doan_v3) =====
 function du_doan_v3(totals_list) {
   if (totals_list.length < 4) return ["Chờ", 0, "Không đủ dữ liệu"];
   const last_result = getTaiXiu(totals_list.at(-1));
@@ -57,12 +53,10 @@ function du_doan_v3(totals_list) {
   return [last_result === "Tài" ? "Xỉu" : "Tài", 70, "Không có quy tắc nổi bật"];
 }
 
-// ===== THUẬT TOÁN 4 (du_doan_v4) =====
 function du_doan_v4(kq_list, tong_list) {
   if (kq_list.length < 3) return ["Chờ", 50];
   const last_3_kq = kq_list.slice(-3);
   const last_tong = tong_list.at(-1);
-
   if (last_3_kq.join(',') === 'Tài,Tài,Tài') return ["Xỉu", 70];
   if (last_3_kq.join(',') === 'Xỉu,Xỉu,Xỉu') return ["Tài", 70];
   if (last_tong >= 15) return ["Xỉu", 60];
@@ -70,9 +64,8 @@ function du_doan_v4(kq_list, tong_list) {
   return [kq_list.at(-1), 50];
 }
 
-// ===== THUẬT TOÁN 5 (du_doan_phan_tram) =====
 function du_doan_phan_tram(ma_phien) {
-  if (!ma_phien) return 50;
+  if (!ma_phien) return ["Tài", 50];
   const algo1 = parseInt(crypto.createHash('sha256').update(ma_phien.toString()).digest('hex'), 16) % 100;
   const algo2 = [...ma_phien.toString()].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 100;
   const algo3 = parseInt(crypto.createHash('sha1').update(ma_phien.toString()).digest('hex').slice(-2), 16) % 100;
@@ -80,7 +73,6 @@ function du_doan_phan_tram(ma_phien) {
   return [confidence >= 50 ? "Tài" : "Xỉu", confidence];
 }
 
-// ===== THUẬT TOÁN 7 (du_doan_theo_xi_ngau_prob) =====
 function du_doan_v7(dice_list) {
     if (!dice_list || dice_list.length === 0) return ["Chờ", 50];
     const [d1, d2, d3] = dice_list.at(-1);
@@ -92,7 +84,6 @@ function du_doan_v7(dice_list) {
     return [prediction, confidence];
 }
 
-// ===== THUẬT TOÁN 8 (phan_tich_cau_sunwin) =====
 function du_doan_v8(ds_tong) {
   let do_tin_cay = 0;
   const now = new Date();
@@ -100,14 +91,11 @@ function du_doan_v8(ds_tong) {
       return ["Chờ", 0, "Không áp dụng công thức vào 0h-5h sáng"];
   }
   if (ds_tong.length < 3) return ["Chờ", 0, "Không đủ dữ liệu"];
-
   if (ds_tong.at(-1) > 10 && ds_tong.at(-2) > 10 && ds_tong.at(-3) > 10) do_tin_cay += 15;
   if (ds_tong.at(-1) <= 10 && ds_tong.at(-2) <= 10 && ds_tong.at(-3) <= 10) do_tin_cay += 15;
-
   const du_doan = ds_tong.at(-1) > 10 ? "Xỉu" : "Tài";
   return [du_doan, Math.min(do_tin_cay, 100)];
 }
-
 
 /**
  * Hàm dự đoán chính, tổng hợp từ nhiều thuật toán con.
@@ -124,15 +112,24 @@ function predictNext(history) {
   const percentTai = (counts["Tài"] / totalGames) * 100;
   const percentXiu = (counts["Xỉu"] / totalGames) * 100;
 
-  // 2. Nếu lịch sử quá ngắn, trả về kết quả mặc định
+  // ✅ SỬA ĐỔI: Luôn đưa ra dự đoán ngay cả khi lịch sử ngắn
   if (history.length < 5) {
-    return ["Chờ", 30, percentTai, percentXiu];
+    if (history.length === 0) {
+      // Nếu chưa có gì, mặc định là Tài
+      return ["Tài", 40, 0, 0];
+    }
+    // Nếu có ít lịch sử, dự đoán ngược lại với kết quả gần nhất (cầu 1-1)
+    const lastResult = history[0].result;
+    const prediction = lastResult === "Tài" ? "Xỉu" : "Tài";
+    // Độ tin cậy thấp, tăng nhẹ theo số lượng dữ liệu
+    const confidence = 40 + history.length * 5; 
+    return [prediction, confidence, percentTai, percentXiu];
   }
 
   // 3. Chuẩn bị dữ liệu đầu vào cho các thuật toán
-  const totals_list = history.map(h => h.total);
-  const kq_list = history.map(h => h.result);
-  const dice_list = history.map(h => h.dice).filter(Boolean); // Lọc ra các phiên có dữ liệu xúc xắc
+  const totals_list = history.map(h => h.total).reverse(); // Đảo ngược để phần tử cuối là gần nhất
+  const kq_list = history.map(h => h.result).reverse();
+  const dice_list = history.map(h => h.dice).filter(Boolean).reverse();
   const ma_phien = history[0].sid;
 
   // 4. Chạy tất cả các thuật toán
@@ -151,8 +148,8 @@ function predictNext(history) {
   const tai_count = valid_predictions.filter(p => p === "Tài").length;
   const xiu_count = valid_predictions.filter(p => p === "Xỉu").length;
 
-  let final_prediction = "Chờ";
-  let confidence = 50;
+  let final_prediction;
+  let confidence;
 
   if (tai_count > xiu_count) {
     final_prediction = "Tài";
@@ -161,17 +158,14 @@ function predictNext(history) {
     final_prediction = "Xỉu";
     confidence = (xiu_count / valid_predictions.length) * 100;
   } else {
-    // Nếu cân bằng, có thể chọn bẻ cầu gần nhất hoặc theo 1-1
-    final_prediction = kq_list[0] === "Tài" ? "Xỉu" : "Tài";
-    confidence = 55; // Độ tin cậy thấp khi các thuật toán không đồng thuận
+    // Nếu cân bằng, bẻ cầu phiên gần nhất
+    final_prediction = kq_list.at(-1) === "Tài" ? "Xỉu" : "Tài";
+    confidence = 55;
   }
 
-  // Giới hạn độ tin cậy trong khoảng hợp lý
   confidence = Math.max(55, Math.min(98, confidence));
 
-  // Trả về kết quả theo định dạng yêu cầu của server.js
   return [final_prediction, confidence, percentTai, percentXiu];
 }
 
-// Export hàm để server.js có thể sử dụng
 module.exports = { predictNext };
