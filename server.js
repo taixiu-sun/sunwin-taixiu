@@ -1,13 +1,14 @@
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-const { du_doan_matchrandom } = require('./matchrandom.js');
+// ✅ SỬA LẠI DÒNG NÀY: Import hàm "predictNext"
+const { predictNext } = require('./matchrandom.js');
 
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 5000;
 
-// Thêm percent_tai và percent_xiu vào cấu trúc dữ liệu
+// Giữ nguyên cấu trúc dữ liệu
 let currentData = {
   "phien_truoc": null,
   "ket_qua": "Đang chờ...",
@@ -22,7 +23,7 @@ let currentData = {
   "Id": "Rinkivana"
 };
 
-let history = [];
+let history = []; // Lịch sử các phiên đã qua
 
 function pt_xh(ls) {
     if (ls.length < 5) return "Chưa đủ dữ liệu để phân tích xu hướng";
@@ -74,13 +75,13 @@ function connectWebSocket() {
       const cmd = data[1].cmd;
       const content = data[1];
 
-      if (cmd === 1008 && content.sid) {
+      if (cmd === 1008 && content.sid) { // Khi có phiên mới
         currentData.phien_hien_tai = content.sid;
         currentData.ket_qua = "Đang chờ...";
         currentData.Dice = [];
         
-        // Nhận 4 giá trị trả về từ hàm dự đoán
-        const [prediction, confidence, percent_tai, percent_xiu] = du_doan_matchrandom(history);
+        // ✅ SỬA LẠI DÒNG NÀY: Gọi hàm "predictNext" và nhận 4 giá trị trả về
+        const [prediction, confidence, percent_tai, percent_xiu] = predictNext(history);
 
         // Cập nhật vào currentData
         currentData.du_doan = prediction;
@@ -92,18 +93,23 @@ function connectWebSocket() {
         console.log(`\n[PHIÊN MỚI] Bắt đầu phiên ${content.sid}. Dự đoán: ${prediction} (${parseFloat(confidence).toFixed(2)}%) | TÀI: ${parseFloat(percent_tai).toFixed(2)}% - XỈU: ${parseFloat(percent_xiu).toFixed(2)}%`);
       }
 
-      if (cmd === 1003 && content.gBB) {
+      if (cmd === 1003 && content.gBB) { // Khi có kết quả phiên
         const { d1, d2, d3, sid } = content;
         const total = d1 + d2 + d3;
         const result = total > 10 ? "Tài" : "Xỉu";
-        history.unshift({ result, total });
-        if (history.length > 100) history.pop();
-        currentData.phien_truoc = sid;
-        currentData.ket_qua = result;
-        currentData.Dice = [d1, d2, d3];
-        currentData.cau = pt_xh(history);
-        currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-        console.log(`[KẾT QUẢ] Phiên ${sid} → ${d1}-${d2}-${d3} = ${total} (${result})`);
+        
+        // Chỉ thêm vào lịch sử nếu phiên này chưa tồn tại
+        if (!history.some(item => item.sid === sid)) {
+            history.unshift({ result, total, sid });
+            if (history.length > 100) history.pop(); // Giới hạn lịch sử 100 phiên
+
+            currentData.phien_truoc = sid;
+            currentData.ket_qua = result;
+            currentData.Dice = [d1, d2, d3];
+            currentData.cau = pt_xh(history);
+            currentData.ngay = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+            console.log(`[KẾT QUẢ] Phiên ${sid} → ${d1}-${d2}-${d3} = ${total} (${result})`);
+        }
       }
     } catch (err) {
       console.error('[ERROR] Lỗi xử lý dữ liệu:', err.message);
