@@ -57,3 +57,7 @@ function predictNext(history) {
   // Nếu "Tài" ra nhiều hơn thì đoán "Xỉu" và ngược lại.
   return (count["Tài"] || 0) > (count["Xỉu"] || 0) ? "Xỉu" : "Tài";
 }
+
+// ✅ THÊM DÒNG NÀY VÀO CUỐI FILE
+// Dòng này giúp các file khác (như server.js) có thể gọi được hàm predictNext
+module.exports = { predictNext };
