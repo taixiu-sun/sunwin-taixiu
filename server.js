@@ -1,14 +1,13 @@
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-// ✅ SỬA LẠI DÒNG NÀY: Import hàm "predictNext"
-const { predictNext } = require('./matchrandom.js');
+const { predictNext } = require('./matchrandom.js'); // Import hàm dự đoán mới
 
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 5000;
 
-// Giữ nguyên cấu trúc dữ liệu
+// Cấu trúc dữ liệu trả về cho client
 let currentData = {
   "phien_truoc": null,
   "ket_qua": "Đang chờ...",
@@ -20,28 +19,25 @@ let currentData = {
   "percent_xiu": "0%",
   "cau": "Chưa có dữ liệu",
   "ngay": "",
-  "Id": "Rinkivana"
+  "Id": "@ghetvietcode - Rinkivana"
 };
 
-let history = []; // Lịch sử các phiên đã qua
+let history = []; // Lịch sử các phiên đã qua (tối đa 100)
 
+// Hàm phân tích xu hướng (giữ nguyên)
 function pt_xh(ls) {
     if (ls.length < 5) return "Chưa đủ dữ liệu để phân tích xu hướng";
-    let dem_t = ls.filter(s => s.result === "Tài").length;
+    const dem_t = ls.filter(s => s.result === "Tài").length;
     const dem_x = ls.length - dem_t;
-    let chuoi_ht = 1;
     const kq_ht = ls[0].result;
-    for (let i = 1; i < ls.length; i++) {
-        if (ls[i].result === kq_ht) chuoi_ht++;
+    let chuoi_ht = 0;
+    for (const item of ls) {
+        if (item.result === kq_ht) chuoi_ht++;
         else break;
     }
-    let tt_chuoi = chuoi_ht >= 3 ? `Cầu ${kq_ht} ${chuoi_ht} nút` : "";
-    let pt_tong = "";
-    const tong_diem_c = ls[0].total;
-    if (tong_diem_c <= 10) pt_tong = `Tổng thấp (${tong_diem_c})`;
-    else if (tong_diem_c >= 17) pt_tong = `Tổng cao (${tong_diem_c})`;
-    let mo_ta_xh = `Xu hướng ${dem_t > dem_x ? `Tài (${dem_t}/${ls.length})` : dem_x > dem_t ? `Xỉu (${dem_x}/${ls.length})` : 'cân bằng'}`;
-    return [mo_ta_xh, tt_chuoi, pt_tong].filter(Boolean).join(", ");
+    const tt_chuoi = chuoi_ht >= 3 ? `Cầu ${kq_ht} ${chuoi_ht} phiên` : "Cầu 1-1 hoặc 2-1";
+    const mo_ta_xh = `Xu hướng ${dem_t > dem_x ? `Tài (${dem_t}/${ls.length})` : dem_x > dem_t ? `Xỉu (${dem_x}/${ls.length})` : 'cân bằng'}`;
+    return `${mo_ta_xh}, ${tt_chuoi}`;
 }
 
 const messagesToSend = [
@@ -75,12 +71,13 @@ function connectWebSocket() {
       const cmd = data[1].cmd;
       const content = data[1];
 
-      if (cmd === 1008 && content.sid) { // Khi có phiên mới
+      // Khi có phiên mới
+      if (cmd === 1008 && content.sid) { 
         currentData.phien_hien_tai = content.sid;
         currentData.ket_qua = "Đang chờ...";
         currentData.Dice = [];
         
-        // ✅ SỬA LẠI DÒNG NÀY: Gọi hàm "predictNext" và nhận 4 giá trị trả về
+        // Gọi hàm dự đoán mới và nhận 4 giá trị trả về
         const [prediction, confidence, percent_tai, percent_xiu] = predictNext(history);
 
         // Cập nhật vào currentData
@@ -93,14 +90,16 @@ function connectWebSocket() {
         console.log(`\n[PHIÊN MỚI] Bắt đầu phiên ${content.sid}. Dự đoán: ${prediction} (${parseFloat(confidence).toFixed(2)}%) | TÀI: ${parseFloat(percent_tai).toFixed(2)}% - XỈU: ${parseFloat(percent_xiu).toFixed(2)}%`);
       }
 
-      if (cmd === 1003 && content.gBB) { // Khi có kết quả phiên
+      // Khi có kết quả phiên
+      if (cmd === 1003 && content.gBB) { 
         const { d1, d2, d3, sid } = content;
         const total = d1 + d2 + d3;
         const result = total > 10 ? "Tài" : "Xỉu";
         
-        // Chỉ thêm vào lịch sử nếu phiên này chưa tồn tại
+        // Chỉ thêm vào lịch sử nếu phiên này chưa tồn tại để tránh trùng lặp
         if (!history.some(item => item.sid === sid)) {
-            history.unshift({ result, total, sid });
+            // Thêm dữ liệu xúc xắc vào lịch sử
+            history.unshift({ result, total, sid, dice: [d1, d2, d3] }); 
             if (history.length > 100) history.pop(); // Giới hạn lịch sử 100 phiên
 
             currentData.phien_truoc = sid;
@@ -126,7 +125,7 @@ function connectWebSocket() {
 
 app.get('/taixiu', (req, res) => res.json(currentData));
 app.get('/', (req, res) => {
-  res.send(`<div style="font-family: sans-serif; text-align: center; padding-top: 50px;"><h2>🚀 Sunwin Tài Xỉu API by Rinkivana</h2><p>API đang hoạt động. Truy cập <a href="/taixiu">/taixiu</a> để xem kết quả JSON.</p></div>`);
+  res.send(`<div style="font-family: sans-serif; text-align: center; padding-top: 50px;"><h2>🚀 Sunwin Tài Xỉu API by VanwNhat & Rinkivana</h2><p>API đang hoạt động. Truy cập <a href="/taixiu">/taixiu</a> để xem kết quả JSON.</p></div>`);
 });
 
 app.listen(PORT, () => {
