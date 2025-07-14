@@ -13,7 +13,7 @@ function getTaiXiu(total) {
   return total > 10 ? "Tài" : "Xỉu";
 }
 
-// ===== CÁC THUẬT TOÁN CON (GIỮ NGUYÊN) =====
+// ===== CÁC THUẬT TOÁN CON =====
 function du_doan_v1(totals_list) {
   if (totals_list.length < 4) return ["Chờ", "Đợi thêm dữ liệu"];
   const last_result = getTaiXiu(totals_list.at(-1));
@@ -112,22 +112,19 @@ function predictNext(history) {
   const percentTai = (counts["Tài"] / totalGames) * 100;
   const percentXiu = (counts["Xỉu"] / totalGames) * 100;
 
-  // ✅ SỬA ĐỔI: Luôn đưa ra dự đoán ngay cả khi lịch sử ngắn
+  // 2. Luôn đưa ra dự đoán ngay cả khi lịch sử ngắn
   if (history.length < 5) {
     if (history.length === 0) {
-      // Nếu chưa có gì, mặc định là Tài
       return ["Tài", 40, 0, 0];
     }
-    // Nếu có ít lịch sử, dự đoán ngược lại với kết quả gần nhất (cầu 1-1)
     const lastResult = history[0].result;
     const prediction = lastResult === "Tài" ? "Xỉu" : "Tài";
-    // Độ tin cậy thấp, tăng nhẹ theo số lượng dữ liệu
     const confidence = 40 + history.length * 5; 
     return [prediction, confidence, percentTai, percentXiu];
   }
 
   // 3. Chuẩn bị dữ liệu đầu vào cho các thuật toán
-  const totals_list = history.map(h => h.total).reverse(); // Đảo ngược để phần tử cuối là gần nhất
+  const totals_list = history.map(h => h.total).reverse();
   const kq_list = history.map(h => h.result).reverse();
   const dice_list = history.map(h => h.dice).filter(Boolean).reverse();
   const ma_phien = history[0].sid;
@@ -158,7 +155,6 @@ function predictNext(history) {
     final_prediction = "Xỉu";
     confidence = (xiu_count / valid_predictions.length) * 100;
   } else {
-    // Nếu cân bằng, bẻ cầu phiên gần nhất
     final_prediction = kq_list.at(-1) === "Tài" ? "Xỉu" : "Tài";
     confidence = 55;
   }
@@ -168,4 +164,5 @@ function predictNext(history) {
   return [final_prediction, confidence, percentTai, percentXiu];
 }
 
+// Export hàm để server.js có thể sử dụng
 module.exports = { predictNext };
