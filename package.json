@@ -1,12 +1,12 @@
 {
-  "name": "sunwin-taixiu-api",
-  "version": "1.0.0",
-  "description": "API for Sunwin Tai Xiu prediction",
+  "name": "sunwin-taixiu-api-v2",
+  "version": "2.0.0",
+  "description": "API for Sunwin Tai Xiu prediction using advanced algorithms",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "author": "Rinkivana",
+  "author": "@ghetvietcode - Rinkivana",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
