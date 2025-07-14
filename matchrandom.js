@@ -1,63 +1,68 @@
 /**
- * Dự đoán kết quả tiếp theo dựa vào lịch sử.
- * @param {string[]} history - Mảng chứa lịch sử kết quả, ví dụ: ["Tài", "Xỉu", "Tài"].
- * @returns {string} - "Tài" hoặc "Xỉu".
+ * Dự đoán kết quả và phân tích chi tiết.
+ * @param {string[]} history - Mảng chứa lịch sử kết quả.
+ * @returns {Array} - [dự đoán, độ tin cậy, % tài, % xỉu]
  */
 function predictNext(history) {
-  // 1. Nếu lịch sử quá ngắn (< 4 phiên)
+  // Tính toán tỷ lệ % Tài/Xỉu một lần để sử dụng lại
+  const counts = history.reduce((acc, val) => {
+    acc[val.result] = (acc[val.result] || 0) + 1;
+    return acc;
+  }, { "Tài": 0, "Xỉu": 0 });
+
+  const totalGames = history.length || 1; // Tránh chia cho 0
+  const percentTai = (counts["Tài"] / totalGames) * 100;
+  const percentXiu = (counts["Xỉu"] / totalGames) * 100;
+
+  // 1. Nếu lịch sử quá ngắn
   if (history.length < 4) {
-    // Ưu tiên trả về kết quả của phiên gần nhất, nếu không có thì mặc định là "Tài"
-    return history.at(-1) || "Tài";
+    const prediction = history.at(0)?.result || "Tài";
+    // Trả về mảng 4 giá trị
+    return [prediction, 30, percentTai, percentXiu];
   }
 
-  const last = history.at(-1); // Kết quả của phiên cuối cùng
+  const last = history[0].result;
 
-  // 2. Quy tắc 1: Cầu bệt (dây)
-  // Nếu 4 phiên cuối cùng giống hệt nhau (VD: T, T, T, T) -> theo cầu
-  if (history.slice(-4).every(k => k === last)) {
-    return last;
+  // 2. Quy tắc 1: Cầu bệt (độ tin cậy cao)
+  if (history.slice(0, 4).every(k => k.result === last)) {
+    return [last, 95, percentTai, percentXiu]; // Theo cầu
   }
 
   // 3. Quy tắc 2: Cầu 2-2
-  // Nếu 4 phiên cuối có dạng X, X, T, T -> bẻ cầu
+  const last4 = history.slice(0, 4);
   if (
-    history.length >= 4 &&
-    history.at(-1) === history.at(-2) && // 2 cái cuối giống nhau
-    history.at(-3) === history.at(-4) && // 2 cái trước đó giống nhau
-    history.at(-1) !== history.at(-3)    // 2 cặp này khác nhau
+    last4[0].result === last4[1].result &&
+    last4[2].result === last4[3].result &&
+    last4[0].result !== last4[2].result
   ) {
-    return last === "Tài" ? "Xỉu" : "Tài"; // Dự đoán ngược lại
+    const prediction = last === "Tài" ? "Xỉu" : "Tài";
+    return [prediction, 85, percentTai, percentXiu]; // Bẻ cầu
   }
 
   // 4. Quy tắc 3: Cầu 1-2-1
-  // Nếu 4 phiên cuối có dạng T, X, X, T -> bẻ cầu
-  const last4 = history.slice(-4);
-  if (last4[0] !== last4[1] && last4[1] === last4[2] && last4[2] !== last4[3]) {
-    return last === "Tài" ? "Xỉu" : "Tài"; // Dự đoán ngược lại
+  if (
+    last4[0].result !== last4[1].result &&
+    last4[1].result === last4[2].result &&
+    last4[2].result !== last4[3].result
+  ) {
+    const prediction = last === "Tài" ? "Xỉu" : "Tài";
+    return [prediction, 80, percentTai, percentXiu]; // Bẻ cầu
   }
-
-  // 5. Quy tắc 4: Lặp lại chuỗi 3
-  // Nếu chuỗi 3 phiên gần nhất giống hệt chuỗi 3 phiên trước đó (VD: T,X,T, T,X,T) -> theo cầu
-  if (history.length >= 6) {
-      const pattern = history.slice(-6, -3).toString();
-      const latest = history.slice(-3).toString();
-      if (pattern === latest) {
-        return history.at(-1);
-      }
-  }
-
-  // 6. Quy tắc cuối cùng: Thống kê và bẻ cầu
-  // Nếu không có quy tắc nào ở trên được áp dụng
-  const count = history.reduce((acc, val) => {
-    acc[val] = (acc[val] || 0) + 1;
-    return acc;
-  }, {});
   
-  // Đếm tổng số lần Tài/Xỉu trong toàn bộ lịch sử.
-  // Nếu "Tài" ra nhiều hơn thì đoán "Xỉu" và ngược lại.
-  return (count["Tài"] || 0) > (count["Xỉu"] || 0) ? "Xỉu" : "Tài";
+  // 5. Quy tắc 4: Lặp lại chuỗi 3
+  if (history.length >= 6) {
+    const pattern = history.slice(3, 6).map(i => i.result).toString();
+    const latest = history.slice(0, 3).map(i => i.result).toString();
+    if (pattern === latest) {
+      const prediction = history[2].result; // Lặp lại ký tự đầu của chuỗi 3
+      return [prediction, 75, percentTai, percentXiu];
+    }
+  }
+
+  // 6. Quy tắc cuối cùng: Thống kê và bẻ cầu (độ tin cậy thấp nhất)
+  const prediction = percentTai > percentXiu ? "Xỉu" : "Tài";
+  return [prediction, 55, percentTai, percentXiu];
 }
 
-// ✅ THÊM DÒNG NÀY VÀO CUỐI FILE
-// Dòng này giúp các file khác (như server.js) có thể gọi được hàm predictNext
+// Export hàm để server.js có thể sử dụng
 module.exports = { predictNext };
