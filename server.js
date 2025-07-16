@@ -7,7 +7,8 @@ const app = express();
 // ✅ Cho phép nhiều domain gọi API
 const allowedOrigins = [
   'https://tooltxwanin.site',
-  'https://sunwin-taixiu-1.onrender.com'
+  'https://sunwin-taixiu-1.onrender.com',
+  'http://localhost:9898' // ✅ ĐÃ THÊM LOCALHOST
 ];
 
 app.use(cors({
@@ -34,16 +35,12 @@ let currentData = {
 
 let id_phien_chua_co_kq = null;
 let history = [];
-// Dòng 'isWebSocketConnected' không còn cần thiết nữa
 
 function predictNext(history) {
   if (history.length < 4) return history[0] || "Tài";
-
   const last = history[0];
   const past = [...history].reverse();
-
   if (past.slice(-4).every(k => k === last)) return last;
-
   if (
     past.length >= 4 &&
     past.at(-1) === past.at(-2) &&
@@ -52,18 +49,15 @@ function predictNext(history) {
   ) {
     return last === "Tài" ? "Xỉu" : "Tài";
   }
-
   const last4 = past.slice(-4);
   if (last4[0] !== last4[1] && last4[1] === last4[2] && last4[2] !== last4[3]) {
     return last === "Tài" ? "Xỉu" : "Tài";
   }
-
   if (past.length >= 6) {
     const pattern = past.slice(-6, -3).toString();
     const latest = past.slice(-3).toString();
     if (pattern === latest) return past.at(-1);
   }
-
   const count = history.reduce((acc, val) => {
     acc[val] = (acc[val] || 0) + 1;
     return acc;
@@ -97,7 +91,6 @@ function connectWebSocket() {
         }
       }, i * 600);
     });
-
     setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.ping();
@@ -106,27 +99,21 @@ function connectWebSocket() {
   });
 
   ws.on('pong', () => console.log('[LOG] Ping/Pong duy trì kết nối OK.'));
-
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
       if (Array.isArray(data) && typeof data[1] === 'object') {
         const cmd = data[1].cmd;
-
         if (cmd === 1008 && data[1].sid) {
           id_phien_chua_co_kq = data[1].sid;
         }
-
         if (cmd === 1003 && data[1].gBB) {
           const { d1, d2, d3 } = data[1];
           const total = d1 + d2 + d3;
           const result = total > 10 ? "Tài" : "Xỉu";
-
           history.unshift(result);
           if (history.length > 100) history.pop();
-
           const prediction = predictNext(history);
-
           currentData = {
             phien_truoc: id_phien_chua_co_kq,
             ket_qua: result,
@@ -138,7 +125,6 @@ function connectWebSocket() {
             ngay: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
             Id: "@ghetvietcode - Rinkivana"
           };
-
           console.log(`[DATA] Phiên ${id_phien_chua_co_kq}: ${result} (${total}) | Dự đoán phiên sau: ${prediction}`);
           id_phien_chua_co_kq = null;
         }
