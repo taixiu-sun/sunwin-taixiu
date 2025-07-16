@@ -1,47 +1,50 @@
-// Import các thư viện cần thiết
 const WebSocket = require('ws');
 const express = require('express');
-const cors = require('cors'); // Thư viện để xử lý CORS
+const cors = require('cors');
 
-// Khởi tạo Express app
 const app = express();
 
-// Cấu hình CORS để chỉ cho phép yêu cầu từ website của bạn
-// Đây là cách làm bảo mật và được khuyến nghị
+// ✅ Cho phép nhiều domain gọi API
+const allowedOrigins = [
+  'https://tooltxwanin.site',
+  'https://sunwin-taixiu-1.onrender.com'
+];
+
 app.use(cors({
-  origin: 'https://tooltxwanin.site' 
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Không được phép CORS'));
+    }
+  }
 }));
 
-// Cổng mà server sẽ lắng nghe
 const PORT = process.env.PORT || 5000;
 
-// Biến lưu trữ dữ liệu mới nhất để trả về qua API
 let currentData = {
-  "phien_truoc": null,
-  "ket_qua": "",
-  "Dice": [],
-  "phien_hien_tai": null,
-  "du_doan": "",
-  "do_tin_cay": "N/A",
-  "cau": "",
-  "ngay": "",
-  "Id": "@ghetvietcode-Rinkivana"
+  phien_truoc: null,
+  ket_qua: "",
+  Dice: [],
+  phien_hien_tai: null,
+  du_doan: "",
+  do_tin_cay: "N/A",
+  cau: "",
+  ngay: "",
+  Id: "@ghetvietcode - Rinkivana"
 };
 
 let id_phien_chua_co_kq = null;
-let history = []; // Mảng lưu trữ lịch sử kết quả: ["Tài", "Xỉu", ...]
+let history = [];
 
-// ================== THUẬT TOÁN DỰ ĐOÁN ==================
 function predictNext(history) {
   if (history.length < 4) return history[0] || "Tài";
 
   const last = history[0];
   const past = [...history].reverse();
 
-  // Cầu bệt (4+ kết quả cuối giống nhau)
   if (past.slice(-4).every(k => k === last)) return last;
 
-  // Cầu 2-2 (ví dụ: Xỉu, Xỉu, Tài, Tài)
   if (
     past.length >= 4 &&
     past.at(-1) === past.at(-2) &&
@@ -51,20 +54,17 @@ function predictNext(history) {
     return last === "Tài" ? "Xỉu" : "Tài";
   }
 
-  // Cầu 1-2-1 (ví dụ: Tài, Xỉu, Xỉu, Tài)
   const last4 = past.slice(-4);
   if (last4[0] !== last4[1] && last4[1] === last4[2] && last4[2] !== last4[3]) {
     return last === "Tài" ? "Xỉu" : "Tài";
   }
-    
-  // Cầu lặp 3-3 (ví dụ: T-X-T-T-X-T)
+
   if (past.length >= 6) {
-      const pattern = past.slice(-6, -3).toString();
-      const latest = past.slice(-3).toString();
-      if (pattern === latest) return past.at(-1);
+    const pattern = past.slice(-6, -3).toString();
+    const latest = past.slice(-3).toString();
+    if (pattern === latest) return past.at(-1);
   }
 
-  // Mặc định: Chống lại kết quả đa số trong lịch sử
   const count = history.reduce((acc, val) => {
     acc[val] = (acc[val] || 0) + 1;
     return acc;
@@ -72,7 +72,6 @@ function predictNext(history) {
   return (count["Tài"] || 0) > (count["Xỉu"] || 0) ? "Xỉu" : "Tài";
 }
 
-// ================== KẾT NỐI WEBSOCKET VÀ XỬ LÝ DỮ LIỆU =====================
 const messagesToSend = [
   [1, "MiniGame", "SC_thataoduocko112233", "112233", {
     "info": "{\"ipAddress\":\"2402:800:62cd:ef90:a445:40de:a24a:765e\",\"userId\":\"1a46e9cd-135d-4f29-9cd5-0b61bd2fb2a9\",\"username\":\"SC_thataoduocko112233\",\"timestamp\":1752257356729,\"refreshToken\":\"fe70e712cf3c4737a4ae22cbb3700c8e.f413950acf984ed6b373906f83a4f796\"}",
@@ -100,7 +99,6 @@ function connectWebSocket() {
       }, i * 600);
     });
 
-    // Gửi ping để giữ kết nối
     setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.ping();
@@ -116,19 +114,17 @@ function connectWebSocket() {
       if (Array.isArray(data) && typeof data[1] === 'object') {
         const cmd = data[1].cmd;
 
-        // Lấy ID phiên mới
         if (cmd === 1008 && data[1].sid) {
           id_phien_chua_co_kq = data[1].sid;
         }
 
-        // Nhận kết quả phiên trước
         if (cmd === 1003 && data[1].gBB) {
           const { d1, d2, d3 } = data[1];
           const total = d1 + d2 + d3;
           const result = total > 10 ? "Tài" : "Xỉu";
-          
+
           history.unshift(result);
-          if (history.length > 100) history.pop(); // Giới hạn lịch sử 100 phiên
+          if (history.length > 100) history.pop();
 
           const prediction = predictNext(history);
 
@@ -143,13 +139,13 @@ function connectWebSocket() {
             ngay: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
             Id: "@ghetvietcode - Rinkivana"
           };
-          
+
           console.log(`[DATA] Phiên ${id_phien_chua_co_kq}: ${result} (${total}) | Dự đoán phiên sau: ${prediction}`);
           id_phien_chua_co_kq = null;
         }
       }
     } catch (err) {
-      // Bỏ qua lỗi parse JSON nếu message không phải là JSON
+      // Ignore malformed JSON
     }
   });
 
@@ -160,23 +156,19 @@ function connectWebSocket() {
 
   ws.on('error', (err) => {
     console.error('[ERROR] WebSocket gặp lỗi:', err.message);
-    ws.close(); // Đóng kết nối khi gặp lỗi để kích hoạt sự kiện 'close' và kết nối lại
+    ws.close();
   });
 }
 
-// ================== API ENDPOINTS =====================
-
-// Endpoint chính để website gọi lấy dữ liệu
+// API ENDPOINT
 app.get('/taixiu', (req, res) => {
   res.json(currentData);
 });
 
-// Endpoint gốc để kiểm tra server có đang chạy không
 app.get('/', (req, res) => {
   res.send(`<h2>API Dự Đoán Sunwin</h2><p>Server đang hoạt động. Trạng thái WebSocket và dữ liệu được cập nhật liên tục.</p><p><a href="/taixiu">Xem dữ liệu JSON</a></p>`);
 });
 
-// Khởi chạy server và bắt đầu kết nối WebSocket
 app.listen(PORT, () => {
   console.log(`[INFO] Server đang lắng nghe trên cổng ${PORT}`);
   connectWebSocket();
