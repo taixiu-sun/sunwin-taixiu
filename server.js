@@ -34,7 +34,7 @@ let currentData = {
 
 let id_phien_chua_co_kq = null;
 let history = [];
-let isWebSocketConnected = false; // Biến để kiểm tra đã kết nối WebSocket chưa
+// Dòng 'isWebSocketConnected' không còn cần thiết nữa
 
 function predictNext(history) {
   if (history.length < 4) return history[0] || "Tài";
@@ -89,7 +89,6 @@ function connectWebSocket() {
   });
 
   ws.on('open', () => {
-    isWebSocketConnected = true; // Đánh dấu đã kết nối
     console.log('[LOG] WebSocket đã kết nối thành công.');
     messagesToSend.forEach((msg, i) => {
       setTimeout(() => {
@@ -151,7 +150,6 @@ function connectWebSocket() {
 
   ws.on('close', () => {
     console.log('[WARN] WebSocket đã đóng. Đang kết nối lại sau 2.5 giây...');
-    isWebSocketConnected = false; // Đánh dấu đã ngắt kết nối
     setTimeout(connectWebSocket, 2500);
   });
 
@@ -159,11 +157,6 @@ function connectWebSocket() {
     console.error('[ERROR] WebSocket gặp lỗi:', err.message);
     ws.close();
   });
-}
-
-// ✅ BẮT ĐẦU KẾT NỐI WEBSOCKET MÀ KHÔNG CẦN CHỜ SERVER
-if (!isWebSocketConnected) {
-  connectWebSocket();
 }
 
 // API ENDPOINT
@@ -175,5 +168,9 @@ app.get('/', (req, res) => {
   res.send(`<h2>API Dự Đoán Sunwin</h2><p>Server đang hoạt động. Trạng thái WebSocket và dữ liệu được cập nhật liên tục.</p><p><a href="/taixiu">Xem dữ liệu JSON</a></p>`);
 });
 
-// ✅ EXPORT APP CHO VERCEL SỬ DỤNG, KHÔNG DÙNG APP.LISTEN NỮA
-module.exports = app;
+// ✅ THÊM LẠI KHỐI NÀY ĐỂ RENDER BIẾT SERVER ĐANG CHẠY
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`[INFO] Server đang lắng nghe trên cổng ${PORT}`);
+  connectWebSocket(); // Gọi kết nối WebSocket sau khi server đã sẵn sàng
+});
