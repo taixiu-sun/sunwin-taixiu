@@ -66,8 +66,8 @@ function predictNext(history) {
 
 const messagesToSend = [
   [1, "Simms", "SC_dcumay1234aaa", "11223344p", {
-    "info": "{\"ipAddress\":\"2402:800:62cd:7c2b:dd77:8326:ba05:f657\",\"userId\":\"8443d14b-e229-4a4f-9fa4-37b27c1a7640\",\"username\":\"SC_dcumay1234aaa\",\"timestamp\":1752731508082,\"refreshToken\":\"14231d1135184d5480f58e2b77b3fa24.8cf3006656e8402d8cedc6ee861bdad7\"}",
-    "signature": "08B26DDF93721B3580272A08F01ED70F95813F8DAF50157CCDA89EE917C0BDF5F5D543D2C7AD2F469FCCEA7557E9F5B7531524ECCF33A5A500DD2377FE227B3EB2FC26C018640978AA88D30C5C8F90A62C182A99DA912A264CA9DBA9BED06A621798CCF16E95DF5148451617A3C58C5298925E02E25EEEFD620CBEA65CA55628",
+    "info": "{\"ipAddress\":\"2402:800:62cd:7c2b:dd77:8326:ba05:f657\",\"userId\":\"8443d14b-e229-4a4f-9fa4-37b27c1a7640\",\"username\":\"SC_dcumay1234aaa\",\"timestamp\":1752732562210,\"refreshToken\":\"14231d1135184d5480f58e2b77b3fa24.8cf3006656e8402d8cedc6ee861bdad7\"}",
+    "signature": "4213DE2A9437EB8F65016073D73EABB64223B3C5544CE67049F83D5C5F3621DF95A2D76C0B9EC90FA38C8EEB8D2A07D1DD53C7BAC812AFC0268F19809D330EB1BAF933183F1DD5EAF666A306148F7B4915427CA7262814C78CA53C5C4D5B6A5CF975BA4D9728DC1D92FA5FB396E4728FEEE3263AEFC9E348F61E950F13E73EEB",
     "pid": 5,
     "subi": true
   }],
@@ -100,7 +100,9 @@ function connectWebSocket() {
   });
 
   ws.on('pong', () => console.log('[LOG] Ping/Pong duy trì kết nối OK.'));
+
   ws.on('message', (message) => {
+    console.log('[RECEIVED]', message.toString()); // 🔍 Log message về để kiểm tra
     try {
       const data = JSON.parse(message);
       if (Array.isArray(data) && typeof data[1] === 'object') {
@@ -131,7 +133,7 @@ function connectWebSocket() {
         }
       }
     } catch (err) {
-      // Bỏ qua lỗi JSON không hợp lệ
+      console.error('[ERROR] Lỗi khi parse dữ liệu:', err.message);
     }
   });
 
@@ -146,7 +148,6 @@ function connectWebSocket() {
   });
 }
 
-// API ENDPOINT
 app.get('/taixiu', (req, res) => {
   res.json(currentData);
 });
@@ -157,6 +158,6 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`[INFO] Server đang lắng nghe trên cổng ${PORT}`);
+  console.log(`[INFO] Server đang chạy tại cổng ${PORT}`);
   connectWebSocket();
 });
