@@ -1,16 +1,17 @@
 {
-  "name": "sunwin-api-v2.1",
-  "version": "2.1.0",
-  "description": "API Sunwin Tài Xỉu với thuật toán tổng hợp",
+  "name": "sunwin-taixiu-api",
+  "version": "1.0.0",
+  "description": "API dự đoán Tài/Xỉu SunWin sử dụng WebSocket",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "author": "@ghetvietcode - Rinkivana",
-  "license": "ISC",
+  "keywords": ["sunwin", "taixiu", "websocket", "api"],
+  "author": "Rinkivana",
+  "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "ws": "^8.17.1"
+    "express": "^4.18.2",
+    "ws": "^8.13.0"
   }
 }
