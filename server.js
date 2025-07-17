@@ -4,11 +4,10 @@ const cors = require('cors');
 
 const app = express();
 
-// ✅ Cho phép nhiều domain gọi API
 const allowedOrigins = [
   'https://tooltxwanin.site',
   'https://sunwin-taixiu-1.onrender.com',
-  'http://localhost:9898' // ✅ ĐÃ THÊM LOCALHOST
+  'http://localhost:9898'
 ];
 
 app.use(cors({
@@ -66,9 +65,11 @@ function predictNext(history) {
 }
 
 const messagesToSend = [
-  [1, "MiniGame", "SC_thataoduocko112233", "112233", {
-    "info": "{\"ipAddress\":\"2402:800:62cd:ef90:a445:40de:a24a:765e\",\"userId\":\"1a46e9cd-135d-4f29-9cd5-0b61bd2fb2a9\",\"username\":\"SC_thataoduocko112233\",\"timestamp\":1752257356729,\"refreshToken\":\"fe70e712cf3c4737a4ae22cbb3700c8e.f413950acf984ed6b373906f83a4f796\"}",
-    "signature": "16916AC7F4F163CD00B319824B5B90FFE11BC5E7D232D58E7594C47E271A5CDE0492BB1C3F3FF20171B3A344BEFEAA5C4E9D28800CF18880FEA6AC3770016F2841FA847063B80AF8C8A747A689546CE75E99A7B559612BC30FBA5FED9288B69013C099FD6349ABC2646D5ECC2D5B2A1C5A9817FE5587844B41C752D0A0F6F304"
+  [1, "Simms", "SC_dcumay1234aaa", "11223344p", {
+    "info": "{\"ipAddress\":\"2402:800:62cd:7c2b:dd77:8326:ba05:f657\",\"userId\":\"8443d14b-e229-4a4f-9fa4-37b27c1a7640\",\"username\":\"SC_dcumay1234aaa\",\"timestamp\":1752731508082,\"refreshToken\":\"14231d1135184d5480f58e2b77b3fa24.8cf3006656e8402d8cedc6ee861bdad7\"}",
+    "signature": "08B26DDF93721B3580272A08F01ED70F95813F8DAF50157CCDA89EE917C0BDF5F5D543D2C7AD2F469FCCEA7557E9F5B7531524ECCF33A5A500DD2377FE227B3EB2FC26C018640978AA88D30C5C8F90A62C182A99DA912A264CA9DBA9BED06A621798CCF16E95DF5148451617A3C58C5298925E02E25EEEFD620CBEA65CA55628",
+    "pid": 5,
+    "subi": true
   }],
   [6, "MiniGame", "taixiuPlugin", { cmd: 1005 }],
   [6, "MiniGame", "lobbyPlugin", { cmd: 10001 }]
@@ -154,9 +155,8 @@ app.get('/', (req, res) => {
   res.send(`<h2>API Dự Đoán Sunwin</h2><p>Server đang hoạt động. Trạng thái WebSocket và dữ liệu được cập nhật liên tục.</p><p><a href="/taixiu">Xem dữ liệu JSON</a></p>`);
 });
 
-// ✅ THÊM LẠI KHỐI NÀY ĐỂ RENDER BIẾT SERVER ĐANG CHẠY
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`[INFO] Server đang lắng nghe trên cổng ${PORT}`);
-  connectWebSocket(); // Gọi kết nối WebSocket sau khi server đã sẵn sàng
+  connectWebSocket();
 });
